@@ -104,6 +104,7 @@ View::View(const QRect &geometry)
     , m_pitchSpeed(0)
     , m_targetYaw(0)
     , m_targetPitch(0)
+    , m_eyeHalfDistance(0.01)
     , m_simulationTime(0)
     , m_walkTime(0)
     , m_jumping(false)
@@ -126,8 +127,7 @@ View::View(const QRect &geometry)
 {
     m_camera.setPos(QVector3D(2.5, 0, 2.5));
     m_camera.setYaw(0.1);
-
-    m_camera.setViewSize(size());
+    m_camera.setViewSize(m_stereo ? QSize(width() / 2, height()) : size());
 
     m_context = context();
     m_context->makeCurrent(this);
@@ -585,11 +585,9 @@ void View::render()
     m_compositor->startRender();
 
     m_context->makeCurrent(this);
-    QSizeF viewport(width(), height());
+    QSizeF viewport(m_stereo ? width() / 2 : width(), height());
 
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(0, 0, width(), height());
-
+    glScissor(0, 0, viewport.width(), viewport.height());
     glEnable(GL_STENCIL_TEST);
     glClearStencil(0);
     glStencilMask(~0);
@@ -598,7 +596,7 @@ void View::render()
     glDisable(GL_DEPTH_TEST);
 
     if (m_fullscreen) {
-        drawTexture(QRectF(0, 0, width(), height()), viewport, m_focus->textureId(), 1.0);
+        drawTexture(QRectF(0, 0, viewport.width(), viewport.height()), viewport, m_focus->textureId(), 1.0);
 
         m_context->swapBuffers(this);
         //###### QWaylandCompositor::frameFinished(m_focus->surface());
@@ -690,9 +688,24 @@ void View::render()
     glStencilFunc(GL_EQUAL, 0, ~0);
     glStencilMask(0);
 
-    render(m_camera, QRect(0, 0, width(), height()), m_map.zone(m_camera.pos()));
+    glEnable(GL_SCISSOR_TEST);
+    if (m_stereo) {
+        glViewport(0, 0, viewport.width(), viewport.height());
+        glScissor(0, 0, viewport.width(), viewport.height());
+        m_camera.setEyeOffset(-m_eyeHalfDistance);
+    }
+    // left eye, or whole scene
+    render(m_camera, QRect(0, 0, viewport.width(), viewport.height()), m_map.zone(m_camera.pos()));
 
+    // right eye
+    if (m_stereo) {
+        glViewport(viewport.width(), 0, viewport.width(), viewport.height());
+        glScissor(viewport.width(), 0, viewport.width(), viewport.height());
+        m_camera.setEyeOffset(m_eyeHalfDistance);
+        render(m_camera, QRect(viewport.width(), 0, viewport.width(), viewport.height()), m_map.zone(m_camera.pos()));
+    }
     glDisable(GL_SCISSOR_TEST);
+
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
 
@@ -713,11 +726,11 @@ void View::render()
     }
 
     if (m_showInfo) {
-        drawTexture(QRectF(3 * width() / 4 - 64, 2 * height() / 3 - 64, 128, 128), viewport, m_eyeTextureId, m_touchLookId == -1 ? 0.5 : 0.8);
-        drawTexture(QRectF(width() / 4 - 64, 2 * height() / 3 - 64, 128, 128), viewport, m_arrowsTextureId, m_touchMoveId == -1 ? 0.5 : 0.8);
+        drawTexture(QRectF(3 * viewport.width() / 4 - 64, 2 * viewport.height() / 3 - 64, 128, 128), viewport, m_eyeTextureId, m_touchLookId == -1 ? 0.5 : 0.8);
+        drawTexture(QRectF(viewport.width() / 4 - 64, 2 * viewport.height() / 3 - 64, 128, 128), viewport, m_arrowsTextureId, m_touchMoveId == -1 ? 0.5 : 0.8);
     }
 
-    drawTexture(QRectF(width() - 70, 10, 60, 60), viewport, m_infoTextureId, m_showInfo ? 0.8 : 0.5);
+    drawTexture(QRectF(viewport.width() - 70, 10, 60, 60), viewport, m_infoTextureId, m_showInfo ? 0.8 : 0.5);
 
 #if 0
     static int frame = 0;
@@ -923,8 +936,10 @@ void View::exposeEvent(QExposeEvent *)
 
 void View::resizeEvent(QResizeEvent *)
 {
-    glViewport(0, 0, width(), height());
-    m_camera.setViewSize(size());
+    if (!m_stereo) {
+        glViewport(0, 0, width(), height());
+        m_camera.setViewSize(size());
+    }
     m_animationTimer->start();
 }
 
@@ -1129,6 +1144,11 @@ void View::handleTouchEvent(QTouchEvent *event)
 void View::onLongPress()
 {
     m_dragItem = m_focus;
+}
+
+void View::setStereo(bool s)
+{
+    m_stereo = s;
 }
 
 void View::handleTouchBegin(QTouchEvent *event)
@@ -1499,6 +1519,18 @@ bool View::handleKey(int key, bool pressed)
     case Qt::Key_T:
         if (pressed)
             m_wireframe = !m_wireframe;
+        return true;
+    case Qt::Key_End:
+        if (m_eyeHalfDistance > 0)
+            m_eyeHalfDistance -= 0.001;
+        m_animationTimer->start();
+qDebug() << "m_eyeHalfDistance" << m_eyeHalfDistance;
+        return true;
+    case Qt::Key_Home:
+        if (m_eyeHalfDistance < 1)
+            m_eyeHalfDistance += 0.001;
+        m_animationTimer->start();
+qDebug() << "m_eyeHalfDistance" << m_eyeHalfDistance;
         return true;
     }
 

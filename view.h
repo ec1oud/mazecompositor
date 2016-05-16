@@ -95,6 +95,7 @@ public slots:
     void triggerRender();
     void render();
     void onLongPress();
+    void setStereo(bool s);
 
 private slots:
     void surfaceDestroyed(QObject *surface);
@@ -195,6 +196,7 @@ private:
     qreal m_pitchSpeed;
     qreal m_targetYaw;
     qreal m_targetPitch;
+    qreal m_eyeHalfDistance;
 
     long m_simulationTime;
     long m_walkTime;
@@ -225,6 +227,7 @@ private:
     bool m_wireframe;
     bool m_mouseLook;
     bool m_mouseWalk;
+    bool m_stereo;
 
     QPoint m_dragItemDelta;
     bool m_dragAccepted;

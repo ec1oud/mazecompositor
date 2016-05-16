@@ -33,6 +33,7 @@ public:
     Camera()
         : m_yaw(0)
         , m_pitch(0)
+        , m_eyeOffset(0)
         , m_fov(60)
         , m_height(1.0)
         , m_zNear(0.01)
@@ -68,6 +69,8 @@ public:
     qreal viewBob() const;
     qreal bobResetTime() const;
 
+    void setEyeOffset(qreal amount); // offset from center, positive to the right
+
     void setZNear(qreal zNear) { m_zNear = zNear; m_matrixDirty = true; }
     void setZFar(qreal zFar) { m_zFar = zFar; m_matrixDirty = true; }
 
@@ -90,6 +93,7 @@ private:
 
     qreal m_yaw;
     qreal m_pitch;
+    qreal m_eyeOffset;
     qreal m_fov;
     qreal m_height;
     qreal m_zNear;
