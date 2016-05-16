@@ -1470,6 +1470,8 @@ bool View::handleKey(int key, bool pressed)
         return true;
     case Qt::Key_Left:
     case Qt::Key_Q:
+        if ((QGuiApplication::keyboardModifiers() & Qt::ControlModifier) && key == Qt::Key_Q)
+            QGuiApplication::quit();
         m_turningSpeed = (pressed ? 0.75 : 0.0);
         return true;
     case Qt::Key_Right:
