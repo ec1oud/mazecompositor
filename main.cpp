@@ -32,8 +32,12 @@ int main(int argc, char **argv)
     app.setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
 
     View view(app.primaryScreen()->geometry());
-    view.resize(1280, 800);
-    view.show();
+    if (app.arguments().contains(QLatin1String("-f")))
+        view.showFullScreen();
+    else {
+        view.resize(1280, 800);
+        view.show();
+    }
 
     return app.exec();
 }
