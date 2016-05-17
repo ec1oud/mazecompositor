@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Samuel Rødal
+ * Copyright (c) 2016 Shawn Rutledge
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,31 +20,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <QGuiApplication>
-#include <QScreen>
+#ifndef HEADTRACKER_H
+#define HEADTRACKER_H
 
-#include "headtracker.h"
-#include "view.h"
+#include <QObject>
+#include <osvr/ClientKit/Context.h>
+#include <osvr/ClientKit/Interface.h>
 
-int main(int argc, char **argv)
+class HeadTracker : public QObject
 {
-    QGuiApplication app(argc, argv);
+    Q_OBJECT
+public:
+    explicit HeadTracker(QObject *parent = 0);
 
-    app.setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
+signals:
+    void poseChanged(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, qreal rz);
 
-    View view(app.primaryScreen()->geometry());
-    if (app.arguments().contains(QLatin1String("--vr")) || app.arguments().contains(QLatin1String("-s"))) {
-        view.setStereo(true);
-        HeadTracker *ht = new HeadTracker(&view);
-        QObject::connect(ht, &HeadTracker::poseChanged, &view, &View::setHeadPose);
-        QObject::connect(&view, &View::rendered, ht, &HeadTracker::update);
-    }
-    if (app.arguments().contains(QLatin1String("-f")))
-        view.showFullScreen();
-    else {
-        view.resize(1280, 800);
-        view.show();
-    }
+public slots:
+    void update();
 
-    return app.exec();
-}
+private:
+    osvr::clientkit::ClientContext m_context;
+    osvr::clientkit::Interface m_head;
+};
+
+#endif // HEADTRACKER_H

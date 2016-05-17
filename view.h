@@ -96,6 +96,10 @@ public slots:
     void render();
     void onLongPress();
     void setStereo(bool s);
+    void setHeadPose(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, qreal rz);
+
+signals:
+    void rendered();
 
 private slots:
     void surfaceDestroyed(QObject *surface);

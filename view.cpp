@@ -744,6 +744,7 @@ void View::render()
     m_context->swapBuffers(this);
     m_compositor->endRender();
     frameRendered();
+    emit rendered();
 }
 
 void split(const QRectF &rect, int depth, QRectF *left, QRectF *right)
@@ -1149,6 +1150,19 @@ void View::onLongPress()
 void View::setStereo(bool s)
 {
     m_stereo = s;
+}
+
+void View::setHeadPose(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, qreal rz)
+{
+    Q_UNUSED(x)
+    Q_UNUSED(y)
+    Q_UNUSED(z)
+    Q_UNUSED(rw)
+    Q_UNUSED(rz)
+//    qDebug() << Q_FUNC_INFO << "pitch" << rx << "yaw" << ry;
+    m_targetPitch = rx * -180;
+    m_targetYaw = ry * 180;
+    m_animationTimer->start();
 }
 
 void View::handleTouchBegin(QTouchEvent *event)
