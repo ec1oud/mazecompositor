@@ -395,14 +395,6 @@ View::View(const QRect &geometry)
 
     connect(m_focusTimer, SIGNAL(timeout()), this, SLOT(onLongPress()));
 
-    m_animationTimer = new QTimer(this);
-    m_animationTimer->setInterval(0);
-    m_animationTimer->setSingleShot(true);
-    m_animationTimer->start();
-    connect(m_animationTimer, SIGNAL(timeout()), this, SLOT(render()));
-
-
-
     m_compositor = new Compositor(this);
     m_compositor->create();
     m_input = m_compositor->defaultInputDevice();
@@ -410,12 +402,6 @@ View::View(const QRect &geometry)
 
 View::~View()
 {
-}
-
-void View::triggerRender()
-{
-    if (m_animationTimer->isSingleShot())
-        m_animationTimer->start();
 }
 
 void View::surfaceDestroyed(QObject *object)
@@ -438,8 +424,6 @@ void View::surfaceDestroyed(QObject *object)
 
     delete *it;
     m_surfaces.remove(surface);
-
-    m_animationTimer->start();
 }
 
 void View::surfaceDamaged(const QRegion &)
@@ -449,13 +433,9 @@ void View::surfaceDamaged(const QRegion &)
         SurfaceItem *item = new SurfaceItem(surface);
         item->setOutput(m_compositor->outputFor(this));
         m_surfaces.insert(surface, item);
-
-        connect(item, SIGNAL(opacityChanged()), m_animationTimer, SLOT(start()));
-
         m_dockedSurfaces << item;
     }
-
-    m_animationTimer->start();
+    requestUpdate();
 }
 
 void View::surfaceCreated(QWaylandSurface *surface)
@@ -930,18 +910,13 @@ void View::render(const Camera &camera, const QRect &currentBounds, int zone, in
     }
 }
 
-void View::exposeEvent(QExposeEvent *)
-{
-    m_animationTimer->start();
-}
-
 void View::resizeEvent(QResizeEvent *)
 {
     if (!m_stereo) {
         glViewport(0, 0, width(), height());
         m_camera.setViewSize(size());
     }
-    m_animationTimer->start();
+    requestUpdate();
 }
 
 void View::generateScene()
@@ -1067,7 +1042,6 @@ void View::resizeTo(const QVector2D &local)
     qreal desiredHeight = currentHeight * desiredGrowth;
 
     m_focus->setHeight(desiredHeight);
-    m_animationTimer->start();
 }
 
 QRectF View::dockItemRect(int i) const
@@ -1111,6 +1085,9 @@ bool View::event(QEvent *event)
     case QEvent::TouchUpdate:
     case QEvent::TouchEnd:
         handleTouchEvent((QTouchEvent *)event);
+        break;
+    case QEvent::UpdateRequest:
+        render();
         break;
     default:
         return QWindow::event(event);
@@ -1162,7 +1139,7 @@ void View::setHeadPose(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, 
 //    qDebug() << Q_FUNC_INFO << "pitch" << rx << "yaw" << ry;
     m_targetPitch = rx * -180;
     m_targetYaw = ry * 180;
-    m_animationTimer->start();
+    requestUpdate();
 }
 
 void View::handleTouchBegin(QTouchEvent *event)
@@ -1190,7 +1167,7 @@ void View::handleTouchBegin(QTouchEvent *event)
             m_mousePos = primaryPos;
             m_dragItemDelta = QPoint();
             m_dragAccepted = false;
-            m_animationTimer->start();
+            requestUpdate();
             return;
         }
 
@@ -1229,12 +1206,8 @@ void View::handleTouchBegin(QTouchEvent *event)
 
         }
     } else if (!m_pressingInfo) {
-        if (m_animationTimer->isSingleShot()) {
-            m_simulationTime = m_time.elapsed();
-            m_animationTimer->setSingleShot(false);
-            m_animationTimer->start();
-        }
-
+        m_simulationTime = m_time.elapsed();
+        requestUpdate();
         m_mouseLook = true;
         handleCamera(event);
     }
@@ -1350,7 +1323,7 @@ void View::updateDrag(const QPoint &pos)
             m_dockedSurfaces << m_dragItem;
     }
 
-    m_animationTimer->start();
+    requestUpdate();
 }
 
 void View::handleTouchEnd(QTouchEvent *event)
@@ -1362,7 +1335,7 @@ void View::handleTouchEnd(QTouchEvent *event)
         m_input->sendMouseReleaseEvent(Qt::LeftButton);
         if (QRect(0, 0, 2, 2).contains(primaryPos)) {
             m_fullscreen = false;
-            m_animationTimer->start();
+            requestUpdate();
         }
 
         return;
@@ -1372,15 +1345,11 @@ void View::handleTouchEnd(QTouchEvent *event)
         QRect infoRect(width() - 70, 10, 60, 60);
         if (infoRect.contains(primaryPos)) {
             m_showInfo = !m_showInfo;
-            m_animationTimer->start();
+            requestUpdate();
         }
         m_pressingInfo = false;
         return;
     }
-
-    bool active = !qFuzzyIsNull(m_strafingVelocity) || !qFuzzyIsNull(m_walkingVelocity) || !qFuzzyIsNull(m_pitchSpeed) || !qFuzzyIsNull(m_turningSpeed) || m_jumping;
-    if (!m_animationTimer->isSingleShot() && !active)
-        m_animationTimer->setSingleShot(true);
 
     if (m_dragItem) {
         updateDrag(primaryPos);
@@ -1417,8 +1386,7 @@ void View::handleTouchEnd(QTouchEvent *event)
 	m_fullscreenTimer->start();
     } else if (0 && m_focus && m_fullscreenTimer->isActive()) {
         m_fullscreen = true;
-        m_animationTimer->setSingleShot(true);
-        m_animationTimer->start();
+        requestUpdate();
     } else {
         m_input->sendMouseReleaseEvent(Qt::LeftButton);
     }
@@ -1471,14 +1439,7 @@ void View::keyPressEvent(QKeyEvent *event)
         m_input->sendFullKeyEvent(event);
     } else {
         handleKey(event->key(), true);
-
-        bool active = !qFuzzyIsNull(m_strafingVelocity) || !qFuzzyIsNull(m_walkingVelocity) || !qFuzzyIsNull(m_pitchSpeed) || !qFuzzyIsNull(m_turningSpeed) || m_jumping;
-
-        if (m_animationTimer->isSingleShot() && active) {
-            m_simulationTime = m_time.elapsed();
-            m_animationTimer->setSingleShot(false);
-            m_animationTimer->start();
-        }
+        requestUpdate();
     }
 }
 
@@ -1488,11 +1449,6 @@ void View::keyReleaseEvent(QKeyEvent *event)
         m_input->sendFullKeyEvent(event);
     } else if (!event->isAutoRepeat()) {
         handleKey(event->key(), false);
-
-        bool active = !qFuzzyIsNull(m_strafingVelocity) || !qFuzzyIsNull(m_walkingVelocity) || !qFuzzyIsNull(m_pitchSpeed) || !qFuzzyIsNull(m_turningSpeed) || m_jumping || m_mouseLook || m_dragItem || m_camera.pos().y() > 0;
-
-        if (!m_animationTimer->isSingleShot() && !active)
-            m_animationTimer->setSingleShot(true);
    }
 }
 
@@ -1537,13 +1493,13 @@ bool View::handleKey(int key, bool pressed)
     case Qt::Key_End:
         if (m_eyeHalfDistance > 0)
             m_eyeHalfDistance -= 0.001;
-        m_animationTimer->start();
+        requestUpdate();
 qDebug() << "m_eyeHalfDistance" << m_eyeHalfDistance;
         return true;
     case Qt::Key_Home:
         if (m_eyeHalfDistance < 1)
             m_eyeHalfDistance += 0.001;
-        m_animationTimer->start();
+        requestUpdate();
 qDebug() << "m_eyeHalfDistance" << m_eyeHalfDistance;
         return true;
     }

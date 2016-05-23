@@ -92,7 +92,6 @@ public:
     ~View();
 
 public slots:
-    void triggerRender();
     void render();
     void onLongPress();
     void setStereo(bool s);
@@ -110,7 +109,6 @@ protected:
 
 private:
     void resizeEvent(QResizeEvent *event);
-    void exposeEvent(QExposeEvent *event);
     void generateScene();
 
     void render(const Camera &camera, const QRect &currentBounds, int zone = 0, int depth = 0);
@@ -247,7 +245,6 @@ private:
     QHash<int, bool> m_occupiedTiles;
     QTimer *m_focusTimer;
     QTimer *m_fullscreenTimer;
-    QTimer *m_animationTimer;
     Entity *m_entity;
 
     Compositor *m_compositor;
