@@ -61,6 +61,18 @@ void Camera::setEyeOffset(qreal amount)
     m_matrixDirty = true;
 }
 
+void Camera::setCrouchOffset(qreal amount)
+{
+    m_crouchOffset = amount;
+    m_matrixDirty = true;
+}
+
+void Camera::setForwardOffset(qreal amount)
+{
+    m_forwardOffset = amount;
+    m_matrixDirty = true;
+}
+
 void Camera::setFov(qreal fov)
 {
     m_fov = fov;
@@ -123,7 +135,7 @@ void Camera::updateMatrix() const
     QMatrix4x4 m;
     m *= fromRotation(m_yaw - 180, Qt::YAxis);
     m.translate(-m_pos.x(), -viewPos().y(), -m_pos.z());
-    m.translate(m_eyeOffset, 0);
+    m.translate(m_eyeOffset, -m_crouchOffset, m_forwardOffset);
     m = fromRotation(m_pitch, Qt::XAxis) * m;
     m_viewMatrix = m;
 

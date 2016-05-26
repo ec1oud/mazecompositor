@@ -34,6 +34,8 @@ public:
         : m_yaw(0)
         , m_pitch(0)
         , m_eyeOffset(0)
+        , m_crouchOffset(0)
+        , m_forwardOffset(0)
         , m_fov(60)
         , m_height(1.0)
         , m_zNear(0.01)
@@ -70,6 +72,8 @@ public:
     qreal bobResetTime() const;
 
     void setEyeOffset(qreal amount); // offset from center, positive to the right
+    void setCrouchOffset(qreal amount); // negative to crouch, positive to jump
+    void setForwardOffset(qreal amount); // positive to lean forward
 
     void setZNear(qreal zNear) { m_zNear = zNear; m_matrixDirty = true; }
     void setZFar(qreal zFar) { m_zFar = zFar; m_matrixDirty = true; }
@@ -94,6 +98,8 @@ private:
     qreal m_yaw;
     qreal m_pitch;
     qreal m_eyeOffset;
+    qreal m_crouchOffset;
+    qreal m_forwardOffset;
     qreal m_fov;
     qreal m_height;
     qreal m_zNear;

@@ -103,6 +103,8 @@ View::View(const QRect &geometry)
     , m_turningSpeed(0)
     , m_pitchSpeed(0)
     , m_headPoseOffsetX(0)
+    , m_headPoseOffsetY(0)
+    , m_headPoseOffsetZ(0)
     , m_targetYaw(0)
     , m_headPoseOffsetYaw(0)
     , m_targetPitch(0)
@@ -674,6 +676,8 @@ void View::render()
     if (m_stereo) {
         glViewport(0, 0, viewport.width(), viewport.height());
         glScissor(0, 0, viewport.width(), viewport.height());
+        m_camera.setCrouchOffset(m_headPoseOffsetY);
+        m_camera.setForwardOffset(m_headPoseOffsetZ);
         m_camera.setEyeOffset(m_headPoseOffsetX - m_eyeHalfDistance);
     }
     // left eye, or whole scene
@@ -683,6 +687,8 @@ void View::render()
     if (m_stereo) {
         glViewport(viewport.width(), 0, viewport.width(), viewport.height());
         glScissor(viewport.width(), 0, viewport.width(), viewport.height());
+        m_camera.setCrouchOffset(m_headPoseOffsetY);
+        m_camera.setForwardOffset(m_headPoseOffsetZ);
         m_camera.setEyeOffset(m_headPoseOffsetX + m_eyeHalfDistance);
         render(m_camera, QRect(viewport.width(), 0, viewport.width(), viewport.height()), m_map.zone(m_camera.pos()));
     }
@@ -1133,15 +1139,14 @@ void View::setStereo(bool s)
 
 void View::setHeadPose(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, qreal rz)
 {
-    Q_UNUSED(x)
-    Q_UNUSED(y)
-    Q_UNUSED(z)
     Q_UNUSED(rw)
     Q_UNUSED(rz)
-//    qDebug() << Q_FUNC_INFO << "pitch" << rx << "yaw" << ry;
+//    qDebug() << Q_FUNC_INFO << "pitch" << rx << "yaw" << ry << "sideways" << x << "crouch" << y << "forward" << z;
     m_targetPitch = rx * -180;
     m_targetYaw = m_headPoseOffsetYaw + ry * 180;
     m_headPoseOffsetX = x;
+    m_headPoseOffsetY = y;
+    m_headPoseOffsetZ = z;
     requestUpdate();
 }
 
