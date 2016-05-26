@@ -196,6 +196,7 @@ private:
     qreal m_strafingVelocity;
     qreal m_turningSpeed;
     qreal m_pitchSpeed;
+    qreal m_headPoseOffsetX;
     qreal m_targetYaw;
     qreal m_headPoseOffsetYaw;
     qreal m_targetPitch;
