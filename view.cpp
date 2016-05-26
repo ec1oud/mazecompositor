@@ -103,6 +103,7 @@ View::View(const QRect &geometry)
     , m_turningSpeed(0)
     , m_pitchSpeed(0)
     , m_targetYaw(0)
+    , m_headPoseOffsetYaw(0)
     , m_targetPitch(0)
     , m_eyeHalfDistance(0.01)
     , m_simulationTime(0)
@@ -1138,7 +1139,7 @@ void View::setHeadPose(qreal x, qreal y, qreal z, qreal rw, qreal rx, qreal ry, 
     Q_UNUSED(rz)
 //    qDebug() << Q_FUNC_INFO << "pitch" << rx << "yaw" << ry;
     m_targetPitch = rx * -180;
-    m_targetYaw = ry * 180;
+    m_targetYaw = m_headPoseOffsetYaw + ry * 180;
     requestUpdate();
 }
 
@@ -1489,6 +1490,10 @@ bool View::handleKey(int key, bool pressed)
     case Qt::Key_T:
         if (pressed)
             m_wireframe = !m_wireframe;
+        return true;
+    case Qt::Key_Z:
+        if (pressed)
+            m_headPoseOffsetYaw = m_targetYaw;
         return true;
     case Qt::Key_End:
         if (m_eyeHalfDistance > 0)

@@ -197,6 +197,7 @@ private:
     qreal m_turningSpeed;
     qreal m_pitchSpeed;
     qreal m_targetYaw;
+    qreal m_headPoseOffsetYaw;
     qreal m_targetPitch;
     qreal m_eyeHalfDistance;
 
